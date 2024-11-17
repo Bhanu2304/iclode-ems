@@ -66,9 +66,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['file'])) {
     } else {
         echo "Invalid file format! Please upload a valid CSV file.";
     }
-} else {
-    echo "No file uploaded.";
-}
+} 
 
 function insertBatch($conn, $rows) {
     $values = [];
@@ -259,17 +257,164 @@ function getBranchId($conn, $branchName) {
 
 $conn->close();
 ?>
+
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Import CSV</title>
+    <style>
+        /* General Styles */
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(to bottom right, #6a11cb, #2575fc);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .container {
+            background-color: #fff;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 600px;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            color: #333;
+            margin-bottom: 30px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: bold;
+        }
+
+        /* Form Styling */
+        form {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        label {
+            font-size: 1.2em;
+            color: #333;
+            margin-bottom: 15px;
+            font-weight: bold;
+            text-align: left;
+            width: 100%;
+            padding-left: 10px;
+        }
+
+        input[type="file"] {
+            font-size: 1em;
+            padding: 15px;
+            width: 100%;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            outline: none;
+            background-color: #fafafa;
+            margin-bottom: 30px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        input[type="file"]:hover {
+            border-color: #2575fc;
+            background-color: #f0f8ff;
+        }
+
+        input[type="file"]::file-selector-button {
+            font-size: 1em;
+            padding: 10px 20px;
+            background-color: #2575fc;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        input[type="file"]::file-selector-button:hover {
+            background-color: #6a11cb;
+        }
+
+        button {
+            background: linear-gradient(145deg, #2575fc, #6a11cb);
+            color: #fff;
+            font-size: 1.1em;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+        }
+
+        button:hover {
+            transform: translateY(-3px);
+            background: linear-gradient(145deg, #6a11cb, #2575fc);
+        }
+
+        button:active {
+            transform: translateY(1px);
+            background: linear-gradient(145deg, #2575fc, #6a11cb);
+        }
+
+        /* Icon and Info Styling */
+        .info-text {
+            font-size: 1em;
+            color: #777;
+            margin-top: 20px;
+        }
+
+        .info-text a {
+            color: #2575fc;
+            text-decoration: none;
+        }
+
+        .info-text a:hover {
+            text-decoration: underline;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .container {
+                padding: 25px;
+                width: 80%;
+            }
+
+            h1 {
+                font-size: 2em;
+            }
+
+            button {
+                font-size: 1em;
+                padding: 12px 25px;
+            }
+        }
+    </style>
 </head>
 <body>
-    <h1>Import CSV File</h1>
-    <form action="" method="post" enctype="multipart/form-data">
-        <label for="file">Choose CSV File:</label>
-        <input type="file" name="file" id="file" accept=".csv" required>
-        <button type="submit">Upload</button>
-    </form>
+    <div class="container">
+        <h1>Upload CSV File</h1>
+        <form action="" method="post" enctype="multipart/form-data">
+            <label for="file">Select CSV File</label>
+            <input type="file" name="file" id="file" accept=".csv" required>
+            <button type="submit">
+                <span>&#8593;</span> Upload CSV
+            </button>
+        </form>
+        <div class="info-text">
+            <p>Need help? Check our <a href="#">documentation</a> or contact <a href="#">support</a>.</p>
+        </div>
+    </div>
 </body>
 </html>
