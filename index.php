@@ -5,6 +5,12 @@ $user = "root";
 $password = "";
 $dbname = "icloud-ems";
 
+ini_set('upload_max_filesize', '256M');
+ini_set('post_max_size', '256M');
+ini_set('max_execution_time', '300');
+ini_set('max_input_time', '300');
+ini_set('memory_limit', '512M');
+
 $conn = new mysqli($host, $user, $password, $dbname);
 
 // Check connection
@@ -13,22 +19,22 @@ if ($conn->connect_error) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['file'])) {
-    ini_set('max_execution_time', 600); // Set to 10 minutes
+    ini_set('max_execution_time', 600);
 
-    // Validate file type
+    
     if ($_FILES['file']['type'] === 'text/csv' || mime_content_type($_FILES['file']['tmp_name']) === 'text/plain') {
-        // Move uploaded file to the "uploads" directory
+        
         $csvFile = "uploads/" . basename($_FILES['file']['name']);
         if (!move_uploaded_file($_FILES['file']['tmp_name'], $csvFile)) {
             die("Failed to upload the file.");
         }
 
-        // Open the CSV file
+        
         if (($handle = fopen($csvFile, "r")) !== FALSE) {
-            // Skip the header row
+            
             $header = fgetcsv($handle);
 
-            $batchSize = 500; // Number of rows per batch
+            $batchSize = 500;
             $rows = [];
             $rowCount = 0;
 
@@ -36,13 +42,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['file'])) {
                 $rows[] = $row;
                 $rowCount++;
             
-                // Insert in batches
+                
                 if ($rowCount % $batchSize == 0) {
                     insertBatch($conn, $rows);
-                    $rows = []; // Reset rows
+                    $rows = [];
                 }
             }
-            // Insert remaining rows
+            
             if (!empty($rows)) {
                 insertBatch($conn, $rows);
                 insertCommonFeeCollections($conn, $rows);
@@ -92,8 +98,12 @@ function insertDistinctValues($conn, $column, $table, $field) {
 
     while ($row = $result->fetch_assoc()) {
         $value = $row[$column];
-        $sql_insert = "INSERT INTO $table ($field) VALUES ('$value')";
-        $conn->query($sql_insert);
+        if (!empty($value))
+        {
+            $sql_insert = "INSERT INTO $table ($field) VALUES ('$value')";
+            $conn->query($sql_insert);
+        }
+        
     }
 }
 
@@ -126,8 +136,10 @@ function insertFeeTypeBranchMappings($conn) {
     }
 }
 
-function insertFinancialTransactions($conn, $rows) {
-    foreach ($rows as $row) {
+function insertFinancialTransactions($conn, $rows) 
+{
+    foreach ($rows as $row) 
+    {
         // Insert into Financial_trans table (Parent)
         $transid = uniqid(); // Generate a unique transaction ID
         $amount = $row[17];  // Example for Due_Amount, adjust based on your column
@@ -135,10 +147,9 @@ function insertFinancialTransactions($conn, $rows) {
         $crdr = determineCrdr($row[5]);  // Determine Crdr (Credit or Debit)
         $entryMode = getEntryModeId($conn, $row[5]); // Determine Entry Mode (Concession, Scholarship, etc.)
 
-        $sql = "INSERT INTO Financial_trans (transid, moduleId, amount, crdr, entryMode) 
-                VALUES ('$transid', '$moduleId', '$amount', '$crdr', '$entryMode')";
+        $sql = "INSERT INTO financial_trans (transid, moduleId, amount, crdr, entryMode)  VALUES ('$transid', '$moduleId', '$amount', '$crdr', '$entryMode')";
         if (!$conn->query($sql)) {
-            echo "Error inserting Financial_trans: " . $conn->error;
+            echo "Error inserting financial_trans: " . $conn->error;
         }
 
         // Insert into Financial_trandetails table (Child)
@@ -146,10 +157,10 @@ function insertFinancialTransactions($conn, $rows) {
         $headName = $row[16]; // Fee head name
         $branchId = getBranchId($conn, $row[9]); // Branch from CSV
 
-        $sql_details = "INSERT INTO Financial_trandetails (financialTranId, moduleId, amount, headId, crdr, brid, head_name) 
+        $sql_details = "INSERT INTO financial_transdetail (financialTranId, moduleId, amount, headId, crdr, brid, head_name) 
                         VALUES ('$transid', '$moduleId', '$amount', '$headId', '$crdr', '$branchId', '$headName')";
         if (!$conn->query($sql_details)) {
-            echo "Error inserting Financial_trandetails: " . $conn->error;
+            echo "Error inserting financial_transdetail: " . $conn->error;
         }
     }
 }
@@ -170,10 +181,11 @@ function insertCommonFeeCollections($conn, $rows) {
         $paidDate = date('Y-m-d', strtotime($row[17])); // Paid Date (adjust as necessary)
         $inactive = determineInactiveStatus($row[5]); // Inactive flag
 
-        $sql = "INSERT INTO Common_fee_collection (moduleId, transId, admno, rollno, amount, brId, academicYear, financialYear, displayReceiptNo, entryMode, paidDate, inactive) 
+        $sql = "INSERT INTO common_fee_collection (moduleId, transId, admno, rollno, amount, brId, academicYear, financialYear, displayReceiptNo, entryMode, paidDate, inactive) 
                 VALUES (1, '$transId', '$admno', '$rollno', '$amount', '$brId', '$academicYear', '$financialYear', '$receiptNo', '$entryMode', '$paidDate', '$inactive')";
+
         if (!$conn->query($sql)) {
-            echo "Error inserting Common_fee_collection: " . $conn->error;
+            echo "Error inserting common_fee_collection: " . $conn->error;
         }
 
         // Insert into Common_fee_collection_headwise (Child)
@@ -183,6 +195,7 @@ function insertCommonFeeCollections($conn, $rows) {
 
         $sql_headwise = "INSERT INTO Common_fee_collection_headwise (moduleId, receiptId, headId, headName, brid, amount) 
                          VALUES (1, '$transId', '$headId', '$headName', '$brId', '$amount')";
+
         if (!$conn->query($sql_headwise)) {
             echo "Error inserting Common_fee_collection_headwise: " . $conn->error;
         }
@@ -191,10 +204,10 @@ function insertCommonFeeCollections($conn, $rows) {
 
 function generateReceiptNo($conn) {
     // Generate a unique receipt number (e.g., auto-increment or custom logic)
-    $sql = "SELECT MAX(receipt_id) FROM Common_fee_collection";
+    $sql = "SELECT MAX(id),financialYear FROM common_fee_collection";
     $result = $conn->query($sql);
     $row = $result->fetch_assoc();
-    return "2020-2021/AIE/C13/" . (intval($row['MAX(receipt_id)']) + 1);
+    return "2020-2021/AIE/C13/" . (intval($row['MAX(id)']) + 1);
 }
 
 
@@ -229,7 +242,7 @@ function determineCrdr($voucherType) {
 
 function getEntryModeId($conn, $voucherType) {
     // Logic to fetch entry mode from EntryMode table based on voucher type
-    $sql = "SELECT entryModeId FROM EntryMode WHERE voucherType = '$voucherType'";
+    $sql = "SELECT id as entryModeId FROM entrymode WHERE entrymodename = '$voucherType'";
     $result = $conn->query($sql);
     if ($result && $row = $result->fetch_assoc()) {
         return $row['entryModeId'];
